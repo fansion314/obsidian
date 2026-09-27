@@ -1,0 +1,9 @@
+/src/
+/pkg/
+/dist/
+/.cache/
+/*.tar.gz
+/*.pkg.tar.*
+/*.src.tar.*
+*.part
+.DS_Store
