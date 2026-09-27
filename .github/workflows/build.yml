@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   build:
-    name: Package x86_64
+    name: Package both variants (x86_64)
     runs-on: ubuntu-latest
     container: archlinux:base-devel
     timeout-minutes: 30

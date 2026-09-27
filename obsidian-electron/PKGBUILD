@@ -1,9 +1,9 @@
 # Based on Arch Linux's obsidian PKGBUILD by Sven-Hendrik Haase,
 # Gennadiy Mykhailiuta and Xuanwo.
 
-pkgname=obsidian-electron-bin
+pkgname=obsidian-electron
 pkgver=1.13.7
-pkgrel=1
+pkgrel=2
 pkgdesc='A powerful knowledge base on top of local Markdown files (official app, latest system Electron)'
 # Upstream 1.13.7's ARM archive contains x86-64 native addons, so do not
 # advertise aarch64 support until upstream supplies matching binaries.
@@ -12,7 +12,7 @@ url='https://obsidian.md'
 license=('LicenseRef-Obsidian')
 depends=('bash' 'electron' 'fontconfig' 'zlib' 'hicolor-icon-theme')
 provides=("obsidian=${pkgver}")
-conflicts=('obsidian')
+conflicts=('obsidian' 'obsidian-electron-bin')
 options=('!strip' '!debug')
 
 # The standalone .asar.gz is only the updater payload: it lacks app.asar,

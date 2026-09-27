@@ -2,51 +2,76 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-target_arch=x86_64
+root=$PWD
+case ${1:-} in
+    ''|--source-only) ;;
+    *) echo 'Usage: ci/build.sh [--source-only]' >&2; exit 1 ;;
+esac
 if (( EUID == 0 )); then
     echo 'Run this script as an unprivileged makepkg user.' >&2
     exit 1
 fi
-
-# This package only copies prebuilt upstream files.
-source ./PKGBUILD
+source ./obsidian-electron/PKGBUILD
 version="${pkgver}-${pkgrel}"
 if [[ ${GITHUB_REF_TYPE:-} == tag && ${GITHUB_REF_NAME:-} != "v${version}" ]]; then
     echo "Release tag must be v${version}, matching PKGBUILD." >&2
     exit 1
 fi
-bash -n PKGBUILD obsidian.sh
-desktop-file-validate md.obsidian.Obsidian.desktop
+outdir="$root/dist/x86_64"
+mkdir -p "$outdir" "$root/.cache/sources"
 metadata=$(mktemp)
 config=$(mktemp)
 trap 'rm -f "$metadata" "$config"' EXIT
-makepkg --printsrcinfo > "$metadata"
-diff -u .SRCINFO "$metadata"
-
-mkdir -p "dist/$target_arch"
-outdir=$(realpath "dist/$target_arch")
 cat > "$config" <<EOF
 source /etc/makepkg.conf
-CARCH='$target_arch'
-CHOST='$target_arch-pc-linux-gnu'
 PKGDEST='$outdir'
-SRCDEST='$PWD'
+SRCDEST='$root/.cache/sources'
 SRCPKGDEST='$outdir'
 PKGEXT='.pkg.tar.zst'
 SRCEXT='.src.tar.gz'
 EOF
-makepkg --config "$config" --cleanbuild --force --noconfirm
-package="$outdir/${pkgname}-${version}-${target_arch}.pkg.tar.zst"
-test -s "$package"
-bsdtar -xOf "$package" .PKGINFO | grep -Fx "arch = $target_arch"
-bsdtar -xOf "$package" .PKGINFO | grep -Fx 'depend = electron'
-test -s "pkg/$pkgname/opt/Obsidian/app.asar"
-test -s "pkg/$pkgname/opt/Obsidian/obsidian.asar"
-test -f "pkg/$pkgname/opt/Obsidian/md.obsidian.Obsidian.desktop"
-[[ $(readlink "pkg/$pkgname/usr/bin/obsidian") == /opt/Obsidian/obsidian ]]
-[[ $(readlink "pkg/$pkgname/usr/share/applications/md.obsidian.Obsidian.desktop") == /opt/Obsidian/md.obsidian.Obsidian.desktop ]]
-for addon in btime get-fonts; do
-    readelf -h "pkg/$pkgname/opt/Obsidian/app.asar.unpacked/node_modules/$addon/binding.node" | grep -F 'Advanced Micro Devices X86-64'
-done
-makepkg --config "$config" --source --force
-printf 'Built %s\n' "$package"
+
+build_recipe() (
+    local recipe=$1
+    cd "$root/$recipe"
+    bash -n PKGBUILD
+    makepkg --printsrcinfo > "$metadata"
+    diff -u .SRCINFO "$metadata"
+    makepkg --config "$config" --cleanbuild --force --noconfirm
+    local package="$outdir/${recipe}-${version}-x86_64.pkg.tar.zst"
+    test -s "$package"
+    bsdtar -xOf "$package" .PKGINFO | grep -Fx "pkgname = $recipe"
+    bsdtar -xOf "$package" .PKGINFO | grep -Fx 'arch = x86_64'
+    bsdtar -xOf "$package" .PKGINFO | grep -Fx 'depend = electron'
+    local appdir="pkg/$recipe/opt/Obsidian"
+    test -s "$appdir/app.asar"
+    test -s "$appdir/obsidian.asar"
+    desktop-file-validate "$appdir/md.obsidian.Obsidian.desktop"
+    [[ $(readlink "pkg/$recipe/usr/bin/obsidian") == /opt/Obsidian/obsidian ]]
+    [[ $(readlink "pkg/$recipe/usr/share/applications/md.obsidian.Obsidian.desktop") == /opt/Obsidian/md.obsidian.Obsidian.desktop ]]
+    for addon in btime get-fonts; do
+        readelf -h "$appdir/app.asar.unpacked/node_modules/$addon/binding.node" | grep -F 'Advanced Micro Devices X86-64'
+    done
+    makepkg --config "$config" --source --force
+)
+
+bash -n obsidian-electron/obsidian.sh
+build_recipe obsidian-electron
+
+# A deterministic application archive allows the -bin recipe to pin its exact
+# release checksum before publishing. Never include pacman build metadata here.
+payload="obsidian-electron-${version}-x86_64.tar.gz"
+tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner --format=gnu \
+    -C obsidian-electron/pkg/obsidian-electron/opt -cf - Obsidian \
+    | gzip -n > "$outdir/$payload"
+sha256sum "$outdir/$payload"
+
+# Maintainers can build this payload first when updating the -bin checksum.
+[[ ${1:-} != --source-only ]] || exit 0
+# makepkg still verifies the pinned GitHub source hash, using this CI-built
+# archive as its source cache until the matching release has been published.
+cp "$outdir/$payload" "$root/.cache/sources/$payload"
+build_recipe obsidian-electron-bin
+diff -r obsidian-electron/pkg/obsidian-electron/opt/Obsidian \
+    obsidian-electron-bin/pkg/obsidian-electron-bin/opt/Obsidian
+printf 'Built both package variants for %s\n' "$version"
