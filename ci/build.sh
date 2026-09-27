@@ -24,11 +24,7 @@ config=$(mktemp)
 trap 'rm -f "$metadata" "$config"' EXIT
 cat > "$config" <<EOF
 source /etc/makepkg.conf
-PKGDEST='$outdir'
 SRCDEST='$root/.cache/sources'
-SRCPKGDEST='$outdir'
-PKGEXT='.pkg.tar.zst'
-SRCEXT='.src.tar.gz'
 EOF
 
 build_recipe() (
@@ -37,12 +33,11 @@ build_recipe() (
     bash -n PKGBUILD
     makepkg --printsrcinfo > "$metadata"
     diff -u .SRCINFO "$metadata"
-    makepkg --config "$config" --cleanbuild --force --noconfirm
-    local package="$outdir/${recipe}-${version}-x86_64.pkg.tar.zst"
-    test -s "$package"
-    bsdtar -xOf "$package" .PKGINFO | grep -Fx "pkgname = $recipe"
-    bsdtar -xOf "$package" .PKGINFO | grep -Fx 'arch = x86_64'
-    bsdtar -xOf "$package" .PKGINFO | grep -Fx 'depend = electron'
+    grep -Fx "pkgname = $recipe" "$metadata"
+    grep -Fx $'\tarch = x86_64' "$metadata"
+    grep -Fx $'\tdepends = electron' "$metadata"
+    # Stage and validate each recipe without producing redundant pacman archives.
+    makepkg --config "$config" --cleanbuild --force --noconfirm --noarchive
     local appdir="pkg/$recipe/opt/Obsidian"
     test -s "$appdir/app.asar"
     test -s "$appdir/obsidian.asar"
@@ -52,7 +47,6 @@ build_recipe() (
     for addon in btime get-fonts; do
         readelf -h "$appdir/app.asar.unpacked/node_modules/$addon/binding.node" | grep -F 'Advanced Micro Devices X86-64'
     done
-    makepkg --config "$config" --source --force
 )
 
 bash -n obsidian-electron/obsidian.sh
@@ -74,4 +68,4 @@ cp "$outdir/$payload" "$root/.cache/sources/$payload"
 build_recipe obsidian-electron-bin
 diff -r obsidian-electron/pkg/obsidian-electron/opt/Obsidian \
     obsidian-electron-bin/pkg/obsidian-electron-bin/opt/Obsidian
-printf 'Built both package variants for %s\n' "$version"
+printf 'Built one release payload and verified both recipes for %s\n' "$version"

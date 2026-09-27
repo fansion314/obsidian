@@ -3,27 +3,21 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 source ./obsidian-electron/PKGBUILD
+release_name=$pkgname
+app_version=$pkgver
 version="${pkgver}-${pkgrel}"
 tag="v${version}"
 [[ ${GITHUB_REF_TYPE:-} == tag && ${GITHUB_REF_NAME:-} == "$tag" ]]
 
-assets=(
-    "${pkgname}-${version}-x86_64.pkg.tar.zst"
-    "${pkgname}-${version}.src.tar.gz"
-    "${pkgname}-${version}-x86_64.tar.gz"
-    "${pkgname}-bin-${version}-x86_64.pkg.tar.zst"
-    "${pkgname}-bin-${version}.src.tar.gz"
-)
-for asset in "${assets[@]}"; do test -s "dist/$asset"; done
-(
-    cd dist
-    sha256sum "${assets[@]}" > SHA256SUMS
-    sha256sum --check SHA256SUMS
-)
+asset="${pkgname}-${version}-x86_64.tar.gz"
+test -s "dist/$asset"
+# Verify against the -bin recipe rather than uploading a second checksum asset.
+expected_sha=$(source ./obsidian-electron-bin/PKGBUILD; printf '%s' "${sha256sums_x86_64[0]}")
+printf '%s  %s\n' "$expected_sha" "dist/$asset" | sha256sum --check
 notes=$(mktemp)
 trap 'rm -f "$notes"' EXIT
 {
-    printf 'Official Obsidian %s application resources repackaged for Arch Linux,\n' "$pkgver"
+    printf 'Official Obsidian %s application resources repackaged for Arch Linux,\n' "$app_version"
     cat <<'EOF'
 using the latest system `electron` package. Bundled Electron is excluded.
 
@@ -31,15 +25,11 @@ Two mutually exclusive package recipes are provided:
 - `obsidian-electron`: extracts the required resources from the official installer.
 - `obsidian-electron-bin`: downloads this release's prebuilt application archive.
 
-Assets include both x86_64 packages, their AUR source archives, the prebuilt
-application archive and SHA256SUMS. No official Electron bundle is downloaded
-when building the `-bin` variant.
-Application files are installed in `/opt/Obsidian`, with symlinks in the standard
-command, desktop-entry, icon and license directories.
+This release stores only the prebuilt application archive consumed by the
+`obsidian-electron-bin` AUR recipe. Its SHA-256 is pinned in that recipe.
+It is not a pacman installation package. Build either AUR recipe with makepkg;
+application files are installed in `/opt/Obsidian` and use system Electron.
 
-Install the package for your architecture with `sudo pacman -U <package>.pkg.tar.zst`.
-It replaces the repository's `obsidian` package. The desktop entry matches the
-upstream Wayland application ID, `md.obsidian.Obsidian`.
 EOF
 } > "$notes"
 
@@ -52,8 +42,7 @@ if draft=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --j
     fi
 else
     gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag \
-        --draft --title "$pkgname $version" --notes-file "$notes"
+        --draft --title "$release_name $version" --notes-file "$notes"
 fi
-gh release upload "$tag" "${assets[@]/#/dist/}" dist/SHA256SUMS \
-    --repo "$GITHUB_REPOSITORY" --clobber
+gh release upload "$tag" "dist/$asset" --repo "$GITHUB_REPOSITORY" --clobber
 gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
