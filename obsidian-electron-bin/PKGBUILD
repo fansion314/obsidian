@@ -14,7 +14,7 @@ options=('!strip' '!debug')
 _package="obsidian-electron-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst"
 source_x86_64=("https://github.com/fansion314/obsidian/releases/download/v${pkgver}-${pkgrel}/${_package}")
 noextract=("${_package}")
-sha256sums_x86_64=('SKIP')
+sha256sums_x86_64=('c26488ecae657a0429aeac81dee9c8f3575e17a8e2378ba31cd7767b2d264377')
 
 package() {
     bsdtar -xf "$srcdir/$_package" -C "$pkgdir" usr
