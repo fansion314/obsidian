@@ -3,7 +3,7 @@
 
 pkgname=obsidian-electron
 pkgver=1.13.7
-pkgrel=7
+pkgrel=8
 pkgdesc='A powerful knowledge base on top of local Markdown files (official app, latest system Electron)'
 # Upstream 1.13.7's ARM archive contains x86-64 native addons, so do not
 # advertise aarch64 support until upstream supplies matching binaries.
