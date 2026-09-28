@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore:
+      - 'obsidian-electron-bin/PKGBUILD'
+      - 'obsidian-electron-bin/.SRCINFO'
   pull_request:
   workflow_dispatch:
 
@@ -37,11 +40,11 @@ jobs:
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -- bash ci/build.sh
           source obsidian-electron/PKGBUILD
-          echo "payload=dist/x86_64/obsidian-electron-${pkgver}-${pkgrel}-x86_64.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "payload=dist/x86_64/obsidian-electron-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: payload-x86_64
-          path: ${{ steps.build.outputs.payload }}
+          path: dist/
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -57,7 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: payload-x86_64
@@ -66,3 +69,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash ci/release.sh
+      - name: Update pinned binary recipe on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main
+          if [[ $(git rev-parse origin/main) != "$GITHUB_SHA" ]]; then
+            echo 'main advanced; leave the newer recipe intact.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cp dist/bin-recipe/PKGBUILD obsidian-electron-bin/PKGBUILD
+          cp dist/bin-recipe/.SRCINFO obsidian-electron-bin/.SRCINFO
+          git add obsidian-electron-bin/PKGBUILD obsidian-electron-bin/.SRCINFO
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'build: pin Obsidian pacman asset checksum'
+          git push origin HEAD:main

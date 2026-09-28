@@ -3,7 +3,7 @@
 
 pkgname=obsidian-electron
 pkgver=1.13.7
-pkgrel=3
+pkgrel=4
 pkgdesc='A powerful knowledge base on top of local Markdown files (official app, latest system Electron)'
 # Upstream 1.13.7's ARM archive contains x86-64 native addons, so do not
 # advertise aarch64 support until upstream supplies matching binaries.
@@ -27,7 +27,7 @@ sha256sums_x86_64=('d3cbe375cbfa4024db1910b98191649f4134c5c48aee5e60b6e7713987dc
 
 package() {
     local resources="$srcdir/obsidian-${pkgver}/resources"
-    local appdir="$pkgdir/opt/Obsidian"
+    local appdir="$pkgdir/usr/lib/obsidian-electron"
 
     install -dm755 "$appdir"
     cp -a "$resources/app.asar.unpacked" "$appdir/"
@@ -36,16 +36,16 @@ package() {
     install -m755 "$srcdir/obsidian.sh" "$appdir/obsidian"
     install -m644 "$srcdir/"{md.obsidian.Obsidian.desktop,LICENSE-Obsidian} "$appdir/"
 
-    # Keep all application files in /opt, with standard desktop integration.
+    # Keep private application files under /usr/lib, with standard desktop integration.
     install -dm755 "$pkgdir/usr/bin" "$pkgdir/usr/share/applications" \
         "$pkgdir/usr/share/icons/hicolor/512x512/apps" \
         "$pkgdir/usr/share/licenses/$pkgname"
-    ln -s /opt/Obsidian/obsidian "$pkgdir/usr/bin/obsidian"
+    ln -s /usr/lib/obsidian-electron/obsidian "$pkgdir/usr/bin/obsidian"
     # Match upstream package.json desktopName and the native Wayland app_id.
-    ln -s /opt/Obsidian/md.obsidian.Obsidian.desktop \
+    ln -s /usr/lib/obsidian-electron/md.obsidian.Obsidian.desktop \
         "$pkgdir/usr/share/applications/md.obsidian.Obsidian.desktop"
-    ln -s /opt/Obsidian/icon.png \
+    ln -s /usr/lib/obsidian-electron/icon.png \
         "$pkgdir/usr/share/icons/hicolor/512x512/apps/obsidian.png"
-    ln -s /opt/Obsidian/LICENSE-Obsidian \
+    ln -s /usr/lib/obsidian-electron/LICENSE-Obsidian \
         "$pkgdir/usr/share/licenses/$pkgname/LICENSE-Obsidian"
 }

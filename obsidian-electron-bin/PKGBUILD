@@ -1,6 +1,6 @@
 pkgname=obsidian-electron-bin
 pkgver=1.13.7
-pkgrel=3
+pkgrel=4
 pkgdesc='Obsidian with the latest system Electron (prebuilt GitHub release)'
 arch=('x86_64')
 url='https://github.com/fansion314/obsidian'
@@ -10,22 +10,14 @@ provides=("obsidian=${pkgver}" "obsidian-electron=${pkgver}")
 conflicts=('obsidian' 'obsidian-electron')
 options=('!strip' '!debug')
 
-# This ready-to-install application tree is built by GitHub Actions from the
-# sibling obsidian-electron recipe. Do not download the official Electron bundle.
-source_x86_64=("https://github.com/fansion314/obsidian/releases/download/v${pkgver}-${pkgrel}/obsidian-electron-${pkgver}-${pkgrel}-x86_64.tar.gz")
-sha256sums_x86_64=('eb53bb64d3618c6c523a1bd5e7fadd0296296695e93337cd7f79842c7d509761')
+# This pacman package is built by GitHub Actions from the sibling recipe.
+_package="obsidian-electron-${pkgver}-${pkgrel}-x86_64.pkg.tar.zst"
+source_x86_64=("https://github.com/fansion314/obsidian/releases/download/v${pkgver}-${pkgrel}/${_package}")
+noextract=("${_package}")
+sha256sums_x86_64=('SKIP')
 
 package() {
-    install -dm755 "$pkgdir/opt"
-    cp -a "$srcdir/Obsidian" "$pkgdir/opt/Obsidian"
-    install -dm755 "$pkgdir/usr/bin" "$pkgdir/usr/share/applications" \
-        "$pkgdir/usr/share/icons/hicolor/512x512/apps" \
+    bsdtar -xf "$srcdir/$_package" -C "$pkgdir" usr
+    mv "$pkgdir/usr/share/licenses/obsidian-electron" \
         "$pkgdir/usr/share/licenses/$pkgname"
-    ln -s /opt/Obsidian/obsidian "$pkgdir/usr/bin/obsidian"
-    ln -s /opt/Obsidian/md.obsidian.Obsidian.desktop \
-        "$pkgdir/usr/share/applications/md.obsidian.Obsidian.desktop"
-    ln -s /opt/Obsidian/icon.png \
-        "$pkgdir/usr/share/icons/hicolor/512x512/apps/obsidian.png"
-    ln -s /opt/Obsidian/LICENSE-Obsidian \
-        "$pkgdir/usr/share/licenses/$pkgname/LICENSE-Obsidian"
 }

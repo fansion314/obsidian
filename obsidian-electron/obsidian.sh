@@ -10,4 +10,4 @@ if [[ -r $flags_file ]]; then
     done < "$flags_file"
 fi
 
-exec /usr/bin/electron /opt/Obsidian/app.asar "${flags[@]}" "$@"
+exec /usr/bin/electron /usr/lib/obsidian-electron/app.asar "${flags[@]}" "$@"

@@ -25,6 +25,7 @@ trap 'rm -f "$metadata" "$config"' EXIT
 cat > "$config" <<EOF
 source /etc/makepkg.conf
 SRCDEST='$root/.cache/sources'
+PKGDEST='$outdir'
 EOF
 
 build_recipe() (
@@ -36,14 +37,17 @@ build_recipe() (
     grep -Fx "pkgname = $recipe" "$metadata"
     grep -Fx $'\tarch = x86_64' "$metadata"
     grep -Fx $'\tdepends = electron' "$metadata"
-    # Stage and validate each recipe without producing redundant pacman archives.
-    makepkg --config "$config" --cleanbuild --force --noconfirm --noarchive
-    local appdir="pkg/$recipe/opt/Obsidian"
+    if [[ $recipe == obsidian-electron ]]; then
+        makepkg --config "$config" --cleanbuild --force --noconfirm
+    else
+        makepkg --config "$config" --cleanbuild --force --noconfirm --noarchive
+    fi
+    local appdir="pkg/$recipe/usr/lib/obsidian-electron"
     test -s "$appdir/app.asar"
     test -s "$appdir/obsidian.asar"
     desktop-file-validate "$appdir/md.obsidian.Obsidian.desktop"
-    [[ $(readlink "pkg/$recipe/usr/bin/obsidian") == /opt/Obsidian/obsidian ]]
-    [[ $(readlink "pkg/$recipe/usr/share/applications/md.obsidian.Obsidian.desktop") == /opt/Obsidian/md.obsidian.Obsidian.desktop ]]
+    [[ $(readlink "pkg/$recipe/usr/bin/obsidian") == /usr/lib/obsidian-electron/obsidian ]]
+    [[ $(readlink "pkg/$recipe/usr/share/applications/md.obsidian.Obsidian.desktop") == /usr/lib/obsidian-electron/md.obsidian.Obsidian.desktop ]]
     for addon in btime get-fonts; do
         readelf -h "$appdir/app.asar.unpacked/node_modules/$addon/binding.node" | grep -F 'Advanced Micro Devices X86-64'
     done
@@ -52,13 +56,15 @@ build_recipe() (
 bash -n obsidian-electron/obsidian.sh
 build_recipe obsidian-electron
 
-# A deterministic application archive allows the -bin recipe to pin its exact
-# release checksum before publishing. Never include pacman build metadata here.
-payload="obsidian-electron-${version}-x86_64.tar.gz"
-tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner --format=gnu \
-    -C obsidian-electron/pkg/obsidian-electron/opt -cf - Obsidian \
-    | gzip -n > "$outdir/$payload"
+payload="obsidian-electron-${version}-x86_64.pkg.tar.zst"
+test -s "$outdir/$payload"
+bsdtar -tf "$outdir/$payload" | grep -Fx 'usr/lib/obsidian-electron/app.asar'
 sha256sum "$outdir/$payload"
+digest=$(sha256sum "$outdir/$payload" | cut -d ' ' -f 1)
+mkdir -p dist/bin-recipe
+sed "s/^sha256sums_x86_64=.*/sha256sums_x86_64=('$digest')/" \
+    obsidian-electron-bin/PKGBUILD > dist/bin-recipe/PKGBUILD
+(cd dist/bin-recipe && makepkg --printsrcinfo > .SRCINFO)
 
 # Maintainers can build this payload first when updating the -bin checksum.
 [[ ${1:-} != --source-only ]] || exit 0
@@ -66,6 +72,6 @@ sha256sum "$outdir/$payload"
 # archive as its source cache until the matching release has been published.
 cp "$outdir/$payload" "$root/.cache/sources/$payload"
 build_recipe obsidian-electron-bin
-diff -r obsidian-electron/pkg/obsidian-electron/opt/Obsidian \
-    obsidian-electron-bin/pkg/obsidian-electron-bin/opt/Obsidian
+diff -r obsidian-electron/pkg/obsidian-electron/usr/lib/obsidian-electron \
+    obsidian-electron-bin/pkg/obsidian-electron-bin/usr/lib/obsidian-electron
 printf 'Built one release payload and verified both recipes for %s\n' "$version"
