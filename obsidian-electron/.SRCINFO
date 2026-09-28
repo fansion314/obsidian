@@ -1,7 +1,7 @@
 pkgbase = obsidian-electron
 	pkgdesc = A powerful knowledge base on top of local Markdown files (official app, latest system Electron)
 	pkgver = 1.13.7
-	pkgrel = 4
+	pkgrel = 5
 	url = https://obsidian.md
 	arch = x86_64
 	license = LicenseRef-Obsidian
@@ -18,7 +18,7 @@ pkgbase = obsidian-electron
 	source = obsidian.sh
 	source = md.obsidian.Obsidian.desktop
 	source = LICENSE-Obsidian
-	sha256sums = 4004fae63ed9236a1c91aa955f3ba7c00d67d6988149179b53575289a46a2902
+	sha256sums = 5cab5220361350abc9f8faae746366f98f0db97ce9623736e1623f871e2000b9
 	sha256sums = 0251425a4f4efdc5efb0384eaee38dd2430107c5a43094877a4fa75b48e43020
 	sha256sums = d9fdc14f9c2fb95bb38310281268fdad413c1b49fa93213df3184f9b0ca1175c
 	source_x86_64 = https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/obsidian-1.13.7.tar.gz

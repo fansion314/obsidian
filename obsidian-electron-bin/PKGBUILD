@@ -1,6 +1,6 @@
 pkgname=obsidian-electron-bin
 pkgver=1.13.7
-pkgrel=4
+pkgrel=5
 pkgdesc='Obsidian with the latest system Electron (prebuilt GitHub release)'
 arch=('x86_64')
 url='https://github.com/fansion314/obsidian'
