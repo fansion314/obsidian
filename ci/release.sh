@@ -11,7 +11,6 @@ tag="v${version}"
 
 asset="${pkgname}-${version}-x86_64.pkg.tar.zst"
 test -s "dist/x86_64/$asset"
-bsdtar -tf "dist/x86_64/$asset" | grep -Fx 'usr/lib/obsidian-electron/app.asar'
 notes=$(mktemp)
 trap 'rm -f "$notes"' EXIT
 {

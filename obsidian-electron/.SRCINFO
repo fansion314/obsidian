@@ -1,7 +1,7 @@
 pkgbase = obsidian-electron
 	pkgdesc = A powerful knowledge base on top of local Markdown files (official app, latest system Electron)
 	pkgver = 1.13.7
-	pkgrel = 6
+	pkgrel = 7
 	url = https://obsidian.md
 	arch = x86_64
 	license = LicenseRef-Obsidian
