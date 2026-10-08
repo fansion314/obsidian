@@ -18,6 +18,6 @@ pkgbase = obsidian-electron-bin
 	options = !strip
 	options = !debug
 	source_x86_64 = https://github.com/fansion314/obsidian/releases/download/v1.14.4-1/obsidian-electron-1.14.4-1-x86_64.pkg.tar.zst
-	sha256sums_x86_64 = c26488ecae657a0429aeac81dee9c8f3575e17a8e2378ba31cd7767b2d264377
+	sha256sums_x86_64 = 20603c3710cd3b2df7546702003d13af53ea846e854c2dfe374e31e47f5be7bc
 
 pkgname = obsidian-electron-bin
