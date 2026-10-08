@@ -30,7 +30,8 @@ EOF
 
 build_recipe() (
     local recipe=$1
-    cd "$root/$recipe"
+    local recipe_dir=${2:-$recipe}
+    cd "$root/$recipe_dir"
     bash -n PKGBUILD
     makepkg --printsrcinfo > "$metadata"
     diff -u .SRCINFO "$metadata"
@@ -71,7 +72,7 @@ sed "s/^sha256sums_x86_64=.*/sha256sums_x86_64=('$digest')/" \
 # makepkg still verifies the pinned GitHub source hash, using this CI-built
 # archive as its source cache until the matching release has been published.
 cp "$outdir/$payload" "$root/.cache/sources/$payload"
-build_recipe obsidian-electron-bin
+build_recipe obsidian-electron-bin dist/bin-recipe
 diff -r obsidian-electron/pkg/obsidian-electron/usr/lib/obsidian-electron \
-    obsidian-electron-bin/pkg/obsidian-electron-bin/usr/lib/obsidian-electron
+    dist/bin-recipe/pkg/obsidian-electron-bin/usr/lib/obsidian-electron
 printf 'Built one release payload and verified both recipes for %s\n' "$version"
